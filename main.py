@@ -1,44 +1,39 @@
-from fpdf import FPDF
-import pandas as pd
+import streamlit as st
+import os
+from pypdf import PdfReader
+from io import BytesIO 
+import SplitPDF
 
-LINE_SPACE = 10
-pdf = FPDF(orientation="P", unit="mm", format="A4")
-pdf.set_auto_page_break(auto=False, margin=0)
+with st.sidebar:
+    st.title("File Upload and Save")
 
-df = pd.read_csv("topics.csv")
+    uploaded_file = st.file_uploader("Choose a file")
 
-for _, row in df.iterrows():
-    # Add header
-    pdf.add_page()
-    pdf.set_font(family="Times", style="B", size=24)
-    pdf.set_text_color(100,100,100)
-    pdf.cell(w=0, h=12, txt=row["Topic"], align="L", ln=1)
-    pdf.line(10,22,200,22)
+    if uploaded_file is not None:
+        file_name = uploaded_file.name
+        pdf_bytes = uploaded_file.read()
+        pdfreader = PdfReader(BytesIO(pdf_bytes))
 
-    # Add line for pages
-    y = 22
-    for i in range(26):
-        y += LINE_SPACE
-        pdf.line(10,y,200,y)
-    # Add footer
-    pdf.ln(265)
-    pdf.set_font(family="Times", style="I", size=8)
-    pdf.set_text_color(100,100,100)
-    pdf.cell(w=0, h=10, txt=row["Topic"], align="R")
-
-    for _ in range(int(row["Pages"] - 1)):
-        pdf.add_page()
-        # Add line for pages
-        y = 22
-        for i in range(26):
-            y += LINE_SPACE
-            pdf.line(10,y,200,y)
-        # Addd footer
-        pdf.ln(272)
-        pdf.set_text_color(100,100,100)
-        pdf.cell(w=0, h=10, txt=row["Topic"], align="R")
-
-
-
-pdf.output("output.pdf")
-
+col_split,col_merge = st.columns(2)
+ 
+with col_split:     
+    st.title("Split PDF")
+    if not uploaded_file:
+        st.info("No PDF files found. Please upload a PDF file.")
+    else:
+        output_prefix = st.text_input(label="New file prefix",value="Newfile")
+        ranges_string = st.text_input(label="Page range",value="1-10,11-20")
+        if st.button("Split PDF"):
+            if pdfreader:
+                output_pdf_path = SplitPDF.split_pdf_by_ranges(pdfreader, output_prefix+'_'+file_name.strip('.pdf'), ranges_string)
+                if output_pdf_path:
+                    st.success(f"PDF split successfully! Please dowload")
+                    with open(output_pdf_path, "rb") as file:
+                        st.download_button(
+                            label="Download Split PDF",
+                            data=file,
+                            file_name=os.path.basename(output_pdf_path),
+                            mime="application/pdf"
+                        )
+            else:
+                st.warning("Please select a PDF file.")
