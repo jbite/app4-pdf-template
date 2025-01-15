@@ -41,8 +41,6 @@ def Split_pdf_by_pages(pdfreader, output_prefix, start_page, end_page=None):
 
    
     writer = PdfWriter()
-    
-    
     try:
         writer.append(pdfreader, "",(start_page-1,end_page))
     except IndexError:
